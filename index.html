@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#05090d" />
+    <meta name="description" content="Reto de reflejos y velocidad de clics: juega partidas rápidas, mide tu reacción y bate tu récord." />
+    <title>Reto de reflejos y clics | Pulso</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        --ink: #f7f6ff;
+        --muted: #a6a9c8;
+        --panel: rgba(28, 33, 68, 0.82);
+        --accent: #9a88ff;
+        --gold: #ffe08a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        min-height: 100svh;
+        margin: 0;
+        padding: clamp(20px, 5vh, 48px) 18px;
+        display: grid;
+        place-items: center;
+        overflow-x: hidden;
+        color: var(--ink);
+        background:
+          radial-gradient(ellipse at 12% 12%, rgba(117, 91, 255, 0.2), transparent 35%),
+          radial-gradient(ellipse at 88% 80%, rgba(255, 89, 174, 0.12), transparent 34%),
+          #10142b;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      button:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 4px;
+      }
+
+      .game {
+        width: min(100%, 780px);
+        margin: auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #b6aaff;
+        font-size: 0.74rem;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.3rem, 8vw, 4.25rem);
+        letter-spacing: -0.07em;
+        line-height: 1;
+        text-align: center;
+      }
+
+      h1 span {
+        color: var(--gold);
+      }
+
+      .intro {
+        margin: 14px auto 24px;
+        color: var(--muted);
+        font-size: clamp(0.9rem, 2.5vw, 1rem);
+        line-height: 1.6;
+        text-align: center;
+      }
+
+      .duration-picker {
+        margin: 0 0 18px;
+        padding: 0;
+        border: 0;
+      }
+
+      .duration-picker legend {
+        width: 100%;
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 750;
+        letter-spacing: 0.1em;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .duration-options {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .duration-button {
+        min-width: 76px;
+        min-height: 42px;
+        padding: 9px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(28, 33, 68, 0.72);
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 750;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+      }
+
+      .duration-button:hover {
+        border-color: rgba(182, 170, 255, 0.7);
+        color: var(--ink);
+        transform: translateY(-1px);
+      }
+
+      .duration-button[aria-pressed="true"] {
+        border-color: transparent;
+        background: linear-gradient(110deg, #8875f5, #b176ee);
+        box-shadow: 0 6px 20px rgba(139, 124, 255, 0.2);
+        color: white;
+      }
+
+      .scoreboard {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .stat {
+        min-width: 0;
+        padding: 12px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 16px;
+        background: var(--panel);
+        text-align: center;
+        backdrop-filter: blur(12px);
+      }
+
+      .stat-label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: clamp(0.59rem, 1.7vw, 0.7rem);
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-size: clamp(1.15rem, 4.5vw, 1.65rem);
+        font-weight: 850;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .arena {
+        position: relative;
+        min-height: clamp(290px, 47vh, 430px);
+        min-height: clamp(290px, 47svh, 430px);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: clamp(20px, 4vw, 28px);
+        background:
+          radial-gradient(circle at 50% 45%, rgba(109, 98, 214, 0.17), transparent 44%),
+          linear-gradient(145deg, rgba(35, 40, 81, 0.92), rgba(22, 26, 56, 0.94));
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+        isolation: isolate;
+      }
+
+      .arena::before,
+      .arena::after {
+        position: absolute;
+        z-index: -1;
+        width: 220px;
+        height: 220px;
+        border: 1px solid rgba(255, 255, 255, 0.055);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .arena::before {
+        top: -125px;
+        left: -70px;
+      }
+
+      .arena::after {
+        right: -100px;
+        bottom: -145px;
+        width: 300px;
+        height: 300px;
+      }
+
+      .arena-message {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        padding: 22px;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .arena-message[hidden],
+      .star[hidden],
+      .result-dialog[hidden] {
+        display: none;
+      }
+
+      .message-symbol {
+        margin-bottom: 10px;
+        color: var(--gold);
+        font-size: 2.4rem;
+      }
+
+      .arena-message strong {
+        font-size: clamp(1.1rem, 4vw, 1.35rem);
+      }
+
+      .arena-message p {
+        max-width: 340px;
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .star {
+        position: absolute;
+        width: 56px;
+        height: 56px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--gold);
+        cursor: pointer;
+        font-size: 2.65rem;
+        line-height: 1;
+        text-shadow: 0 0 22px rgba(255, 213, 114, 0.6);
+        transform: translate(-50%, -50%);
+        transition: scale 120ms ease, color 120ms ease;
+        animation: appear 160ms ease-out;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .star:hover {
+        color: #fff1b9;
+        scale: 1.13;
+      }
+
+      .star:active {
+        scale: 0.88;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+      }
+
+      .start-button,
+      .dialog-button {
+        min-height: 50px;
+        padding: 12px 24px;
+        border: 0;
+        border-radius: 15px;
+        background: linear-gradient(105deg, #8875f5, #bb71df);
+        box-shadow: 0 10px 28px rgba(139, 124, 255, 0.22);
+        color: white;
+        cursor: pointer;
+        font-size: 0.98rem;
+        font-weight: 800;
+        transition: transform 140ms ease, filter 140ms ease;
+      }
+
+      .start-button {
+        min-width: 190px;
+      }
+
+      .start-button:hover,
+      .dialog-button:hover {
+        filter: brightness(1.1);
+        transform: translateY(-2px);
+      }
+
+      .hint {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        text-align: center;
+      }
+
+      .result-dialog {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: none;
+        margin: 0;
+        padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+        place-items: center;
+        overflow-y: auto;
+        border: 0;
+        background: rgba(10, 12, 29, 0.82);
+        color: var(--ink);
+        backdrop-filter: blur(12px);
+      }
+
+      .result-dialog[open] {
+        display: grid;
+        animation: fade-in 180ms ease-out;
+      }
+
+      .result-card {
+        width: min(100%, 430px);
+        padding: clamp(26px, 7vw, 42px);
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at top, rgba(137, 117, 245, 0.19), transparent 45%),
+          #1b2042;
+        box-shadow: 0 28px 100px rgba(0, 0, 0, 0.45);
+        text-align: center;
+      }
+
+      .result-symbol {
+        margin: 0 0 8px;
+        color: var(--gold);
+        font-size: 2.8rem;
+        line-height: 1;
+      }
+
+      .result-card h2 {
+        margin: 0;
+        font-size: clamp(1.8rem, 8vw, 2.5rem);
+        letter-spacing: -0.05em;
+      }
+
+      .result-summary {
+        margin: 10px 0 22px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .result-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 22px;
+      }
+
+      .result-stat {
+        padding: 13px 8px;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 15px;
+        background: rgba(10, 12, 29, 0.25);
+      }
+
+      .result-stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .result-stat strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 1.55rem;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .dialog-actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      .dialog-button.secondary {
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        background: rgba(255, 255, 255, 0.06);
+        box-shadow: none;
+        color: #e6e4fa;
+      }
+
+      :root {
+        --ink: #eaffff;
+        --muted: #89aeb4;
+        --panel: rgba(12, 28, 34, 0.58);
+        --accent: #54f4ee;
+        --gold: #65fff5;
+        color-scheme: dark;
+      }
+
+      body {
+        background:
+          radial-gradient(ellipse at 12% 8%, rgba(17, 212, 214, 0.13), transparent 38%),
+          radial-gradient(ellipse at 88% 84%, rgba(19, 128, 157, 0.15), transparent 36%),
+          #05090d;
+      }
+
+      .eyebrow,
+      h1 span {
+        color: #62f5ef;
+      }
+
+      .stat,
+      .duration-button {
+        border-color: rgba(124, 247, 242, 0.15);
+        background: rgba(11, 25, 31, 0.58);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+        backdrop-filter: blur(18px) saturate(145%);
+        -webkit-backdrop-filter: blur(18px) saturate(145%);
+      }
+
+      .duration-button:hover {
+        border-color: rgba(98, 245, 239, 0.58);
+      }
+
+      .duration-button[aria-pressed="true"] {
+        border-color: rgba(98, 245, 239, 0.65);
+        background: rgba(29, 168, 169, 0.2);
+        box-shadow: inset 0 0 18px rgba(98, 245, 239, 0.08), 0 0 20px rgba(39, 228, 221, 0.08);
+        color: #aafffa;
+      }
+
+      .arena {
+        border-color: rgba(98, 245, 239, 0.19);
+        background:
+          radial-gradient(ellipse at 50% 48%, rgba(13, 148, 153, 0.12), transparent 47%),
+          linear-gradient(145deg, rgba(11, 28, 35, 0.82), rgba(6, 14, 20, 0.9));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 24px 80px rgba(0, 0, 0, 0.36);
+      }
+
+      .arena::before,
+      .arena::after {
+        border-color: rgba(98, 245, 239, 0.08);
+      }
+
+      .message-symbol,
+      .result-symbol {
+        color: #65fff5;
+        text-shadow: 0 0 22px rgba(65, 255, 244, 0.4);
+      }
+
+      .star {
+        z-index: 1;
+        width: 44px;
+        height: 44px;
+        border: 1px solid rgba(198, 255, 253, 0.92);
+        background: radial-gradient(circle at 35% 30%, #eaffff 0, #80fff8 22%, #19dfdc 59%, #0b858d 100%);
+        box-shadow:
+          inset -4px -5px 10px rgba(0, 67, 75, 0.36),
+          inset 2px 2px 5px rgba(255, 255, 255, 0.76),
+          0 0 10px 3px rgba(69, 255, 246, 0.36),
+          0 0 28px rgba(30, 239, 232, 0.42);
+        color: transparent;
+        font-size: 0;
+        text-shadow: none;
+      }
+
+      .star:hover {
+        filter: brightness(1.18);
+        box-shadow:
+          inset -4px -5px 10px rgba(0, 67, 75, 0.28),
+          inset 2px 2px 5px rgba(255, 255, 255, 0.88),
+          0 0 15px 5px rgba(69, 255, 246, 0.46),
+          0 0 34px rgba(30, 239, 232, 0.52);
+      }
+
+      .trail-dot {
+        position: absolute;
+        z-index: 0;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #65fff5;
+        box-shadow: 0 0 12px 4px rgba(65, 255, 244, 0.42);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        animation: trail-fade 300ms ease-out forwards;
+      }
+
+      .start-button,
+      .dialog-button:not(.secondary) {
+        border: 1px solid rgba(153, 255, 250, 0.5);
+        background: linear-gradient(115deg, rgba(30, 190, 188, 0.94), rgba(45, 130, 152, 0.94));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 8px 28px rgba(26, 223, 216, 0.17);
+        color: #f0ffff;
+      }
+
+      .pause-button {
+        min-width: 126px;
+        min-height: 50px;
+        padding: 12px 20px;
+        border: 1px solid rgba(124, 247, 242, 0.28);
+        border-radius: 15px;
+        background: rgba(12, 31, 37, 0.64);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+        color: #b7fdfa;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 750;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+      }
+
+      .pause-button[hidden] {
+        display: none;
+      }
+
+      .pause-button:hover,
+      .dialog-button.secondary:hover {
+        border-color: rgba(98, 245, 239, 0.65);
+        color: white;
+      }
+
+      .hint {
+        color: #76989f;
+      }
+
+      .result-dialog {
+        background: rgba(1, 8, 11, 0.82);
+      }
+
+      .result-card {
+        border-color: rgba(98, 245, 239, 0.2);
+        background:
+          radial-gradient(circle at top, rgba(23, 192, 191, 0.15), transparent 48%),
+          rgba(8, 22, 28, 0.94);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 28px 100px rgba(0, 0, 0, 0.58);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+      }
+
+      .result-stat {
+        border-color: rgba(124, 247, 242, 0.12);
+        background: rgba(1, 10, 14, 0.32);
+      }
+
+      .dialog-button.secondary {
+        border-color: rgba(124, 247, 242, 0.2);
+        background: rgba(12, 31, 37, 0.64);
+        color: #b7fdfa;
+      }
+
+      @keyframes trail-fade {
+        from {
+          opacity: 0.78;
+          scale: 1;
+        }
+        to {
+          opacity: 0;
+          scale: 0.1;
+        }
+      }
+
+      @keyframes appear {
+        from { opacity: 0; scale: 0.7; }
+        to { opacity: 1; scale: 1; }
+      }
+
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @media (max-width: 520px) {
+        body {
+          padding-right: 14px;
+          padding-left: 14px;
+        }
+
+        .intro {
+          margin-bottom: 20px;
+        }
+
+        .duration-picker {
+          margin-bottom: 14px;
+        }
+
+        .duration-button {
+          min-width: 68px;
+          min-height: 40px;
+          padding-right: 13px;
+          padding-left: 13px;
+        }
+
+        .scoreboard {
+          gap: 7px;
+        }
+
+        .stat {
+          padding: 10px 4px;
+          border-radius: 13px;
+        }
+
+        .arena {
+          min-height: clamp(280px, 44svh, 400px);
+        }
+
+        .hint {
+          line-height: 1.5;
+        }
+      }
+
+      @media (max-height: 700px) and (min-width: 521px) {
+        body {
+          padding-top: 18px;
+          padding-bottom: 18px;
+        }
+
+        .intro {
+          margin: 9px auto 14px;
+        }
+
+        .duration-picker {
+          margin-bottom: 12px;
+        }
+
+        .arena {
+          min-height: 250px;
+          min-height: clamp(250px, 38svh, 330px);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="game">
+      <p class="eyebrow">Velocidad · precisión · reflejos</p>
+      <h1>Reto de <span>reflejos</span></h1>
+      <p class="intro">Haz tantos clics como puedas sobre el punto luminoso antes de que se acabe el tiempo.</p>
+
+      <fieldset class="duration-picker">
+        <legend>Duración de la partida</legend>
+        <div class="duration-options" id="duration-options">
+          <button class="duration-button" type="button" data-seconds="15" aria-pressed="false">15 seg</button>
+          <button class="duration-button" type="button" data-seconds="30" aria-pressed="true">30 seg</button>
+          <button class="duration-button" type="button" data-seconds="60" aria-pressed="false">1 min</button>
+          <button class="duration-button" type="button" data-seconds="120" aria-pressed="false">2 min</button>
+        </div>
+      </fieldset>
+
+      <section class="scoreboard" aria-label="Marcador">
+        <div class="stat">
+          <span class="stat-label">Puntos</span>
+          <span class="stat-value" id="score">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Tiempo</span>
+          <span class="stat-value"><span id="time">30</span>s</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Reflejo medio</span>
+          <span class="stat-value" id="reaction">—</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Récord</span>
+          <span class="stat-value" id="best">0</span>
+        </div>
+      </section>
+
+      <section class="arena" id="arena" aria-label="Zona de juego">
+        <div class="arena-message" id="message" aria-live="polite">
+          <span class="message-symbol" aria-hidden="true">✦</span>
+          <strong>¿Listo para jugar?</strong>
+          <p>Elige el tiempo, pulsa «¡A jugar!» y toca el punto luminoso lo más rápido que puedas.</p>
+        </div>
+        <button class="star" id="star" type="button" aria-label="Haz clic en el punto luminoso" hidden>✦</button>
+      </section>
+
+      <div class="controls">
+        <button class="start-button" id="start" type="button">¡A jugar!</button>
+        <button class="pause-button" id="pause" type="button" aria-label="Pausar partida" hidden>Pausar</button>
+      </div>
+      <p class="hint">Tu récord se guarda por duración en este dispositivo.</p>
+    </main>
+
+    <dialog class="result-dialog" id="result-dialog" aria-labelledby="result-title">
+      <section class="result-card">
+        <p class="result-symbol" id="result-symbol" aria-hidden="true">✦</p>
+        <h2 id="result-title">¡Se acabó el tiempo!</h2>
+        <p class="result-summary" id="result-summary"></p>
+        <div class="result-stats">
+          <div class="result-stat">
+            <span>Puntos</span>
+            <strong id="final-score">0</strong>
+          </div>
+          <div class="result-stat">
+            <span>Reflejo medio</span>
+            <strong id="final-reaction">—</strong>
+          </div>
+          <div class="result-stat">
+            <span>Récord personal</span>
+            <strong id="final-best">0</strong>
+          </div>
+          <div class="result-stat">
+            <span>Duración</span>
+            <strong id="final-duration">30s</strong>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="dialog-button" id="replay" type="button">Jugar otra vez</button>
+          <button class="dialog-button secondary" id="choose-duration" type="button">Cambiar duración</button>
+        </div>
+      </section>
+    </dialog>
+
+    <script>
+      const DEFAULT_DURATION = 30;
+      const arena = document.querySelector("#arena");
+      const star = document.querySelector("#star");
+      const startButton = document.querySelector("#start");
+      const pauseButton = document.querySelector("#pause");
+      const scoreDisplay = document.querySelector("#score");
+      const timeDisplay = document.querySelector("#time");
+      const reactionDisplay = document.querySelector("#reaction");
+      const bestDisplay = document.querySelector("#best");
+      const message = document.querySelector("#message");
+      const durationButtons = [...document.querySelectorAll(".duration-button")];
+      const resultDialog = document.querySelector("#result-dialog");
+
+      let selectedDuration = DEFAULT_DURATION;
+      let score = 0;
+      let secondsLeft = selectedDuration;
+      let bestScore = 0;
+      let deadline = 0;
+      let timerId;
+      let starShownAt = 0;
+      let totalReactionMs = 0;
+      let isPlaying = false;
+      let isPaused = false;
+
+      function recordKey(duration) {
+        return `atrapa-la-estrella-record-${duration}`;
+      }
+
+      function readBestScore(duration) {
+        try {
+          const savedScore = Number.parseInt(localStorage.getItem(recordKey(duration)) ?? "0", 10);
+          return Number.isFinite(savedScore) && savedScore >= 0 ? savedScore : 0;
+        } catch (error) {
+          console.warn("No se pudo leer el récord guardado.", error);
+          return 0;
+        }
+      }
+
+      function formatDuration(duration) {
+        return duration >= 60
+          ? `${duration / 60} min`
+          : `${duration} seg`;
+      }
+
+      function averageReaction() {
+        return score > 0 ? Math.round(totalReactionMs / score) : null;
+      }
+
+      function updateReactionDisplay() {
+        const average = averageReaction();
+        reactionDisplay.textContent = average === null ? "—" : `${average}ms`;
+      }
+
+      function moveStar() {
+        const radius = star.offsetWidth / 2;
+        const maxX = Math.max(radius, arena.clientWidth - radius);
+        const maxY = Math.max(radius, arena.clientHeight - radius);
+        const nextX = radius + Math.random() * Math.max(0, maxX - radius * 2);
+        const nextY = radius + Math.random() * Math.max(0, maxY - radius * 2);
+        const currentX = Number.parseFloat(star.style.left);
+        const currentY = Number.parseFloat(star.style.top);
+
+        if (Number.isFinite(currentX) && Number.isFinite(currentY)) {
+          for (let index = 1; index <= 5; index += 1) {
+            const progress = index / 6;
+            const trailDot = document.createElement("span");
+            trailDot.className = "trail-dot";
+            trailDot.style.left = `${currentX + (nextX - currentX) * progress}px`;
+            trailDot.style.top = `${currentY + (nextY - currentY) * progress}px`;
+            trailDot.style.animationDelay = `${index * 18}ms`;
+            arena.append(trailDot);
+            trailDot.addEventListener("animationend", () => trailDot.remove(), { once: true });
+          }
+        }
+
+        star.style.left = `${nextX}px`;
+        star.style.top = `${nextY}px`;
+        starShownAt = performance.now();
+      }
+
+      function setDuration(duration) {
+        if (isPlaying) return;
+
+        selectedDuration = duration;
+        score = 0;
+        secondsLeft = duration;
+        scoreDisplay.textContent = score;
+        timeDisplay.textContent = secondsLeft;
+        reactionDisplay.textContent = "—";
+        bestScore = readBestScore(duration);
+        bestDisplay.textContent = bestScore;
+        message.querySelector("strong").textContent = "¿Listo para jugar?";
+        message.querySelector("p").textContent = "Elige el tiempo, pulsa «¡A jugar!» y toca el punto luminoso lo más rápido que puedas.";
+        durationButtons.forEach((button) => {
+          button.setAttribute("aria-pressed", String(Number(button.dataset.seconds) === duration));
+        });
+      }
+
+      function showResults() {
+        const isNewRecord = score > bestScore;
+        if (isNewRecord) {
+          bestScore = score;
+          bestDisplay.textContent = bestScore;
+          try {
+            localStorage.setItem(recordKey(selectedDuration), String(bestScore));
+          } catch (error) {
+            console.warn("No se pudo guardar el récord en este dispositivo.", error);
+          }
+        }
+
+        const average = averageReaction();
+        document.querySelector("#result-symbol").textContent = isNewRecord ? "🏆" : "✦";
+        document.querySelector("#result-summary").textContent =
+          score === 0
+            ? "¡A la próxima! Toca el punto luminoso y bate tu récord."
+            : `Conseguiste ${score} ${score === 1 ? "punto" : "puntos"} en ${formatDuration(selectedDuration)}. ${
+                isNewRecord ? "¡Nuevo récord personal!" : "¿Puedes superar tu récord?"
+              }`;
+        document.querySelector("#final-score").textContent = score;
+        document.querySelector("#final-reaction").textContent = average === null ? "—" : `${average}ms`;
+        document.querySelector("#final-best").textContent = bestScore;
+        document.querySelector("#final-duration").textContent =
+          selectedDuration >= 60 ? `${selectedDuration / 60} min` : `${selectedDuration}s`;
+        resultDialog.showModal();
+      }
+
+      function finishGame() {
+        isPlaying = false;
+        isPaused = false;
+        window.clearInterval(timerId);
+        pauseButton.hidden = true;
+        secondsLeft = 0;
+        timeDisplay.textContent = secondsLeft;
+        star.hidden = true;
+        message.hidden = false;
+        message.querySelector("strong").textContent = "Partida terminada";
+        message.querySelector("p").textContent = "Mira tus resultados y prueba otra duración.";
+        startButton.textContent = "Jugar otra vez";
+        showResults();
+      }
+
+      function startGame() {
+        if (resultDialog.open) resultDialog.close();
+        window.clearInterval(timerId);
+        score = 0;
+        totalReactionMs = 0;
+        secondsLeft = selectedDuration;
+        isPlaying = true;
+        isPaused = false;
+        deadline = performance.now() + selectedDuration * 1000;
+        scoreDisplay.textContent = score;
+        timeDisplay.textContent = secondsLeft;
+        reactionDisplay.textContent = "—";
+        message.hidden = true;
+        star.hidden = false;
+        pauseButton.hidden = false;
+        pauseButton.textContent = "Pausar";
+        pauseButton.setAttribute("aria-label", "Pausar partida");
+        startButton.textContent = "Reiniciar partida";
+        moveStar();
+
+        timerId = window.setInterval(() => {
+          const remainingMs = deadline - performance.now();
+          secondsLeft = Math.max(0, Math.ceil(remainingMs / 1000));
+          timeDisplay.textContent = secondsLeft;
+          if (remainingMs <= 0) finishGame();
+        }, 100);
+      }
+
+      function togglePause() {
+        if (!isPlaying) return;
+
+        if (!isPaused) {
+          secondsLeft = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+          if (secondsLeft <= 0) {
+            finishGame();
+            return;
+          }
+
+          isPaused = true;
+          window.clearInterval(timerId);
+          star.hidden = true;
+          message.hidden = false;
+          message.querySelector("strong").textContent = "Partida en pausa";
+          message.querySelector("p").textContent = "Tómate un momento. Puedes reanudar cuando quieras.";
+          pauseButton.textContent = "Reanudar";
+          pauseButton.setAttribute("aria-label", "Reanudar partida");
+          return;
+        }
+
+        isPaused = false;
+        deadline = performance.now() + secondsLeft * 1000;
+        starShownAt = performance.now();
+        message.hidden = true;
+        star.hidden = false;
+        pauseButton.textContent = "Pausar";
+        pauseButton.setAttribute("aria-label", "Pausar partida");
+        timerId = window.setInterval(() => {
+          const remainingMs = deadline - performance.now();
+          secondsLeft = Math.max(0, Math.ceil(remainingMs / 1000));
+          timeDisplay.textContent = secondsLeft;
+          if (remainingMs <= 0) finishGame();
+        }, 100);
+      }
+
+      durationButtons.forEach((button) => {
+        button.addEventListener("click", () => setDuration(Number(button.dataset.seconds)));
+      });
+
+      star.addEventListener("click", () => {
+        if (!isPlaying) return;
+
+        totalReactionMs += performance.now() - starShownAt;
+        score += 1;
+        scoreDisplay.textContent = score;
+        updateReactionDisplay();
+        moveStar();
+      });
+
+      startButton.addEventListener("click", startGame);
+      pauseButton.addEventListener("click", togglePause);
+      document.querySelector("#replay").addEventListener("click", startGame);
+      document.querySelector("#choose-duration").addEventListener("click", () => {
+        resultDialog.close();
+        document.querySelector("#duration-options").scrollIntoView({ behavior: "smooth", block: "center" });
+        durationButtons[0].focus();
+      });
+
+      resultDialog.addEventListener("click", (event) => {
+        if (event.target === resultDialog) resultDialog.close();
+      });
+
+      bestScore = readBestScore(selectedDuration);
+      bestDisplay.textContent = bestScore;
+      timeDisplay.textContent = selectedDuration;
+    </script>
+  </body>
+</html>
