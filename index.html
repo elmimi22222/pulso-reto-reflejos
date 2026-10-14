@@ -512,15 +512,15 @@
         color: #f0ffff;
       }
 
-      .pause-button {
+      .stop-button {
         min-width: 126px;
         min-height: 50px;
         padding: 12px 20px;
         border: 1px solid rgba(124, 247, 242, 0.28);
         border-radius: 15px;
-        background: rgba(12, 31, 37, 0.64);
+        background: rgba(50, 19, 26, 0.7);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-        color: #b7fdfa;
+        color: #ffbec8;
         cursor: pointer;
         font-size: 0.95rem;
         font-weight: 750;
@@ -528,13 +528,13 @@
         -webkit-backdrop-filter: blur(16px);
       }
 
-      .pause-button[hidden] {
+      .stop-button[hidden] {
         display: none;
       }
 
-      .pause-button:hover,
+      .stop-button:hover,
       .dialog-button.secondary:hover {
-        border-color: rgba(98, 245, 239, 0.65);
+        border-color: rgba(255, 130, 151, 0.7);
         color: white;
       }
 
@@ -710,7 +710,7 @@
 
       <div class="controls">
         <button class="start-button" id="start" type="button">¡A jugar!</button>
-        <button class="pause-button" id="pause" type="button" aria-label="Pausar partida" hidden>Pausar</button>
+        <button class="stop-button" id="stop" type="button" aria-label="Detener partida" hidden>Detener</button>
       </div>
       <p class="hint">Tu récord se guarda por duración en este dispositivo.</p>
     </main>
@@ -754,7 +754,7 @@
       const arena = document.querySelector("#arena");
       const star = document.querySelector("#star");
       const startButton = document.querySelector("#start");
-      const pauseButton = document.querySelector("#pause");
+      const stopButton = document.querySelector("#stop");
       const scoreDisplay = document.querySelector("#score");
       const timeDisplay = document.querySelector("#time");
       const reactionDisplay = document.querySelector("#reaction");
@@ -774,7 +774,6 @@
       let totalReactionMs = 0;
       let misses = 0;
       let isPlaying = false;
-      let isPaused = false;
 
       function recordKey(duration) {
         return `atrapa-la-estrella-record-${duration}`;
@@ -840,11 +839,18 @@
       }
 
       function setDuration(duration) {
-        if (isPlaying) return;
+        const changedDuringGame = isPlaying;
+        if (changedDuringGame) {
+          window.clearInterval(timerId);
+          isPlaying = false;
+          star.hidden = true;
+          stopButton.hidden = true;
+        }
 
         selectedDuration = duration;
         score = 0;
         misses = 0;
+        totalReactionMs = 0;
         secondsLeft = duration;
         scoreDisplay.textContent = score;
         timeDisplay.textContent = secondsLeft;
@@ -853,14 +859,18 @@
         bestScore = readBestScore(duration);
         bestDisplay.textContent = bestScore;
         message.querySelector("strong").textContent = "¿Listo para jugar?";
-        message.querySelector("p").textContent = "Elige el tiempo, pulsa «¡A jugar!» y toca el punto luminoso lo más rápido que puedas.";
+        message.querySelector("p").textContent = changedDuringGame
+          ? "El tiempo cambió y la partida se reinició. Pulsa «¡A jugar!» para comenzar."
+          : "Elige el tiempo, pulsa «¡A jugar!» y toca el punto luminoso lo más rápido que puedas.";
+        message.hidden = false;
+        startButton.textContent = "¡A jugar!";
         durationButtons.forEach((button) => {
           button.setAttribute("aria-pressed", String(Number(button.dataset.seconds) === duration));
         });
       }
 
-      function showResults() {
-        const isNewRecord = score > bestScore;
+      function showResults(stoppedEarly = false) {
+        const isNewRecord = !stoppedEarly && score > bestScore;
         if (isNewRecord) {
           bestScore = score;
           bestDisplay.textContent = bestScore;
@@ -874,8 +884,11 @@
         const average = averageReaction();
         const hitRate = accuracy();
         document.querySelector("#result-symbol").textContent = isNewRecord ? "🏆" : "✦";
+        document.querySelector("#result-title").textContent = stoppedEarly ? "Partida detenida" : "¡Se acabó el tiempo!";
         document.querySelector("#result-summary").textContent =
-          score === 0
+          stoppedEarly
+            ? `Terminaste la partida con ${score} ${score === 1 ? "punto" : "puntos"}. Puedes cambiar el tiempo o jugar otra vez.`
+            : score === 0
             ? "¡A la próxima! Toca el punto luminoso y bate tu récord."
             : `Conseguiste ${score} ${score === 1 ? "punto" : "puntos"} en ${formatDuration(selectedDuration)}. ${
                 isNewRecord ? "¡Nuevo récord personal!" : "¿Puedes superar tu récord?"
@@ -889,19 +902,18 @@
         resultDialog.showModal();
       }
 
-      function finishGame() {
+      function finishGame(stoppedEarly = false) {
         isPlaying = false;
-        isPaused = false;
         window.clearInterval(timerId);
-        pauseButton.hidden = true;
-        secondsLeft = 0;
+        stopButton.hidden = true;
+        if (!stoppedEarly) secondsLeft = 0;
         timeDisplay.textContent = secondsLeft;
         star.hidden = true;
         message.hidden = false;
-        message.querySelector("strong").textContent = "Partida terminada";
+        message.querySelector("strong").textContent = stoppedEarly ? "Partida detenida" : "Partida terminada";
         message.querySelector("p").textContent = "Mira tus resultados y prueba otra duración.";
         startButton.textContent = "Jugar otra vez";
-        showResults();
+        showResults(stoppedEarly);
       }
 
       function startGame() {
@@ -912,7 +924,6 @@
         totalReactionMs = 0;
         secondsLeft = selectedDuration;
         isPlaying = true;
-        isPaused = false;
         deadline = performance.now() + selectedDuration * 1000;
         scoreDisplay.textContent = score;
         timeDisplay.textContent = secondsLeft;
@@ -920,48 +931,10 @@
         accuracyDisplay.textContent = "—";
         message.hidden = true;
         star.hidden = false;
-        pauseButton.hidden = false;
-        pauseButton.textContent = "Pausar";
-        pauseButton.setAttribute("aria-label", "Pausar partida");
+        stopButton.hidden = false;
         startButton.textContent = "Reiniciar partida";
         moveStar();
 
-        timerId = window.setInterval(() => {
-          const remainingMs = deadline - performance.now();
-          secondsLeft = Math.max(0, Math.ceil(remainingMs / 1000));
-          timeDisplay.textContent = secondsLeft;
-          if (remainingMs <= 0) finishGame();
-        }, 100);
-      }
-
-      function togglePause() {
-        if (!isPlaying) return;
-
-        if (!isPaused) {
-          secondsLeft = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
-          if (secondsLeft <= 0) {
-            finishGame();
-            return;
-          }
-
-          isPaused = true;
-          window.clearInterval(timerId);
-          star.hidden = true;
-          message.hidden = false;
-          message.querySelector("strong").textContent = "Partida en pausa";
-          message.querySelector("p").textContent = "Tómate un momento. Puedes reanudar cuando quieras.";
-          pauseButton.textContent = "Reanudar";
-          pauseButton.setAttribute("aria-label", "Reanudar partida");
-          return;
-        }
-
-        isPaused = false;
-        deadline = performance.now() + secondsLeft * 1000;
-        starShownAt = performance.now();
-        message.hidden = true;
-        star.hidden = false;
-        pauseButton.textContent = "Pausar";
-        pauseButton.setAttribute("aria-label", "Pausar partida");
         timerId = window.setInterval(() => {
           const remainingMs = deadline - performance.now();
           secondsLeft = Math.max(0, Math.ceil(remainingMs / 1000));
@@ -985,14 +958,19 @@
       });
 
       arena.addEventListener("pointerdown", (event) => {
-        if (!isPlaying || isPaused || event.target === star) return;
+        if (!isPlaying || event.target === star) return;
 
         misses += 1;
         updateReactionDisplay();
       });
 
       startButton.addEventListener("click", startGame);
-      pauseButton.addEventListener("click", togglePause);
+      stopButton.addEventListener("click", () => {
+        if (!isPlaying) return;
+        secondsLeft = Math.max(0, Math.ceil((deadline - performance.now()) / 1000));
+        timeDisplay.textContent = secondsLeft;
+        finishGame(true);
+      });
       document.querySelector("#replay").addEventListener("click", startGame);
       document.querySelector("#choose-duration").addEventListener("click", () => {
         resultDialog.close();
