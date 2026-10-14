@@ -136,7 +136,7 @@
 
       .scoreboard {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 10px;
         margin-bottom: 12px;
       }
@@ -254,19 +254,10 @@
         line-height: 1;
         text-shadow: 0 0 22px rgba(255, 213, 114, 0.6);
         transform: translate(-50%, -50%);
-        transition: scale 120ms ease, color 120ms ease;
+        transition: color 120ms ease;
         animation: appear 160ms ease-out;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
-      }
-
-      .star:hover {
-        color: #fff1b9;
-        scale: 1.13;
-      }
-
-      .star:active {
-        scale: 0.88;
       }
 
       .controls {
@@ -466,27 +457,38 @@
 
       .star {
         z-index: 1;
-        width: 44px;
-        height: 44px;
+        width: 56px;
+        height: 56px;
+        border: 0;
+        background: transparent;
+        color: transparent;
+        font-size: 0;
+        text-shadow: none;
+      }
+
+      .star::before {
+        width: 24px;
+        height: 24px;
         border: 1px solid rgba(198, 255, 253, 0.92);
+        border-radius: 50%;
         background: radial-gradient(circle at 35% 30%, #eaffff 0, #80fff8 22%, #19dfdc 59%, #0b858d 100%);
         box-shadow:
           inset -4px -5px 10px rgba(0, 67, 75, 0.36),
           inset 2px 2px 5px rgba(255, 255, 255, 0.76),
           0 0 10px 3px rgba(69, 255, 246, 0.36),
           0 0 28px rgba(30, 239, 232, 0.42);
-        color: transparent;
-        font-size: 0;
-        text-shadow: none;
+        content: "";
+        transition: transform 100ms ease;
       }
 
       .star:hover {
-        filter: brightness(1.18);
-        box-shadow:
-          inset -4px -5px 10px rgba(0, 67, 75, 0.28),
-          inset 2px 2px 5px rgba(255, 255, 255, 0.88),
-          0 0 15px 5px rgba(69, 255, 246, 0.46),
-          0 0 34px rgba(30, 239, 232, 0.52);
+        color: transparent;
+        filter: none;
+        scale: 1;
+      }
+
+      .star:active::before {
+        transform: scale(0.82);
       }
 
       .trail-dot {
@@ -608,6 +610,7 @@
         }
 
         .scoreboard {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 7px;
         }
 
@@ -666,10 +669,10 @@
       <fieldset class="duration-picker">
         <legend>Duración de la partida</legend>
         <div class="duration-options" id="duration-options">
+          <button class="duration-button" type="button" data-seconds="5" aria-pressed="false">5 seg</button>
           <button class="duration-button" type="button" data-seconds="15" aria-pressed="false">15 seg</button>
           <button class="duration-button" type="button" data-seconds="30" aria-pressed="true">30 seg</button>
           <button class="duration-button" type="button" data-seconds="60" aria-pressed="false">1 min</button>
-          <button class="duration-button" type="button" data-seconds="120" aria-pressed="false">2 min</button>
         </div>
       </fieldset>
 
@@ -685,6 +688,10 @@
         <div class="stat">
           <span class="stat-label">Reflejo medio</span>
           <span class="stat-value" id="reaction">—</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Precisión</span>
+          <span class="stat-value" id="accuracy">—</span>
         </div>
         <div class="stat">
           <span class="stat-label">Récord</span>
@@ -723,6 +730,10 @@
             <strong id="final-reaction">—</strong>
           </div>
           <div class="result-stat">
+            <span>Precisión</span>
+            <strong id="final-accuracy">—</strong>
+          </div>
+          <div class="result-stat">
             <span>Récord personal</span>
             <strong id="final-best">0</strong>
           </div>
@@ -747,6 +758,7 @@
       const scoreDisplay = document.querySelector("#score");
       const timeDisplay = document.querySelector("#time");
       const reactionDisplay = document.querySelector("#reaction");
+      const accuracyDisplay = document.querySelector("#accuracy");
       const bestDisplay = document.querySelector("#best");
       const message = document.querySelector("#message");
       const durationButtons = [...document.querySelectorAll(".duration-button")];
@@ -760,6 +772,7 @@
       let timerId;
       let starShownAt = 0;
       let totalReactionMs = 0;
+      let misses = 0;
       let isPlaying = false;
       let isPaused = false;
 
@@ -787,9 +800,16 @@
         return score > 0 ? Math.round(totalReactionMs / score) : null;
       }
 
+      function accuracy() {
+        const attempts = score + misses;
+        return attempts > 0 ? Math.round((score / attempts) * 100) : null;
+      }
+
       function updateReactionDisplay() {
         const average = averageReaction();
         reactionDisplay.textContent = average === null ? "—" : `${average}ms`;
+        const hitRate = accuracy();
+        accuracyDisplay.textContent = hitRate === null ? "—" : `${hitRate}%`;
       }
 
       function moveStar() {
@@ -824,10 +844,12 @@
 
         selectedDuration = duration;
         score = 0;
+        misses = 0;
         secondsLeft = duration;
         scoreDisplay.textContent = score;
         timeDisplay.textContent = secondsLeft;
         reactionDisplay.textContent = "—";
+        accuracyDisplay.textContent = "—";
         bestScore = readBestScore(duration);
         bestDisplay.textContent = bestScore;
         message.querySelector("strong").textContent = "¿Listo para jugar?";
@@ -850,6 +872,7 @@
         }
 
         const average = averageReaction();
+        const hitRate = accuracy();
         document.querySelector("#result-symbol").textContent = isNewRecord ? "🏆" : "✦";
         document.querySelector("#result-summary").textContent =
           score === 0
@@ -859,6 +882,7 @@
               }`;
         document.querySelector("#final-score").textContent = score;
         document.querySelector("#final-reaction").textContent = average === null ? "—" : `${average}ms`;
+        document.querySelector("#final-accuracy").textContent = hitRate === null ? "—" : `${hitRate}%`;
         document.querySelector("#final-best").textContent = bestScore;
         document.querySelector("#final-duration").textContent =
           selectedDuration >= 60 ? `${selectedDuration / 60} min` : `${selectedDuration}s`;
@@ -884,6 +908,7 @@
         if (resultDialog.open) resultDialog.close();
         window.clearInterval(timerId);
         score = 0;
+        misses = 0;
         totalReactionMs = 0;
         secondsLeft = selectedDuration;
         isPlaying = true;
@@ -892,6 +917,7 @@
         scoreDisplay.textContent = score;
         timeDisplay.textContent = secondsLeft;
         reactionDisplay.textContent = "—";
+        accuracyDisplay.textContent = "—";
         message.hidden = true;
         star.hidden = false;
         pauseButton.hidden = false;
@@ -956,6 +982,13 @@
         scoreDisplay.textContent = score;
         updateReactionDisplay();
         moveStar();
+      });
+
+      arena.addEventListener("pointerdown", (event) => {
+        if (!isPlaying || isPaused || event.target === star) return;
+
+        misses += 1;
+        updateReactionDisplay();
       });
 
       startButton.addEventListener("click", startGame);
